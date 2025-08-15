@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+        "label": "Flutter: Clean & Run (Android)",
+        "type": "shell",
+        "problemMatcher": [],
+        "presentation": {
+            "reveal": "always",
+            "panel": "dedicated"
+        },
+        "command": "bash",
+        "args": [
+            "-lc",
+            "flutter clean && flutter pub get && flutter run --no-fast-start"
+        ],
+        "windows": {
+            "command": "cmd",
+            "args": [
+                "/c",
+                "flutter clean && flutter pub get && flutter run --no-fast-start"
+            ]
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        }
+    },
+    {
+        "label": "Flutter: Clean & Build (Web)",
+        "type": "shell",
+        "problemMatcher": [],
+        "presentation": {
+            "reveal": "always",
+            "panel": "dedicated"
+        },
+        "command": "bash",
+        "args": [
+            "-lc",
+            "flutter clean && flutter pub get && flutter build web"
+        ],
+        "windows": {
+            "command": "cmd",
+            "args": [
+                "/c",
+                "flutter clean && flutter pub get && flutter build web"
+            ]
+        },
+        "group": {
+            "kind": "build",
+            "isDefault": true
+        }
+    }
+]
+}
