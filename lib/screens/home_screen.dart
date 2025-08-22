@@ -141,15 +141,69 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() { _loading = false; });
       return;
     }
+    
+    // Mostrar feedback visual de que a atualização está em andamento
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Atualizando saldo...'),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    // Definir estado de carregamento para indicar ao usuário que a atualização está em andamento
+    setState(() { 
+      _loading = true; 
+      _error = null;
+      // Limpar dados antigos imediatamente para evitar confusão
+      _totalBalance = null;
+      _accounts = [];
+    });
+    
     try {
-      final res = await _api.fetchBalance(_itemId!);
+      // Pequeno atraso para garantir que a UI seja atualizada antes da chamada de rede
+      await Future.delayed(const Duration(milliseconds: 300));
+      
+      print('[HOME] Iniciando busca de saldo para itemId: $_itemId');
+      
+      // Usar o parâmetro forceRefresh para garantir que os dados sejam atualizados no backend
+      final res = await _api.fetchBalance(_itemId!, forceRefresh: true);
+      
       if (!mounted) return;
+      
+      print('[HOME] Saldo recebido: ${res.totalBalance}, contas: ${res.accounts.length}');
+      
+      if (res.accounts.isEmpty) {
+        print('[HOME] ALERTA: Lista de contas vazia!');
+        // Mostrar alerta ao usuário
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nenhuma conta encontrada. Tente reconectar sua conta bancária.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+      
       setState(() {
         _totalBalance = res.totalBalance;
         _accounts = res.accounts;
         _loading = false;
         _error = null;
       });
+      
+      // Mostrar feedback de sucesso ao usuário
+      if (mounted && res.accounts.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saldo atualizado com sucesso! Contas encontradas: ${res.accounts.length}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
 
       // Atualiza o widget Android com o valor de comparação atual
       if (!kIsWeb) {
@@ -160,11 +214,26 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } catch (e) {
+      print('[HOME] Erro ao buscar saldo: $e');
       if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;
       });
+      
+      // Mostrar erro ao usuário
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao atualizar saldo: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Tentar Novamente',
+            onPressed: () => _fetchBalance(),
+            textColor: Colors.white,
+          ),
+        ),
+      );
     }
   }
 
@@ -312,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: Center(
           child: _loading
               ? const CircularProgressIndicator()
@@ -589,14 +658,34 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
 
                           const SizedBox(height: 16),
+                          // Adicionando espaço para evitar sobreposição com a navegação nativa
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              TextButton(onPressed: _fetchBalance, child: const Text('Atualizar valores')),
+                              _loading
+                                ? TextButton.icon(
+                                    onPressed: null,
+                                    icon: SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                    label: Text('Atualizando...'),
+                                  )
+                                : TextButton.icon(
+                                    onPressed: _fetchBalance,
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Atualizar valores'),
+                                  ),
                               const SizedBox(width: 8),
-                              OutlinedButton(onPressed: _disconnect, child: const Text('Desconectar')),
+                              OutlinedButton(
+                                onPressed: _loading ? null : _disconnect,
+                                child: const Text('Desconectar'),
+                              ),
                             ],
                           ),
+                          // Margem inferior para evitar sobreposição com a navegação nativa do Android
+                          const SizedBox(height: 32),
                         ],
                       ),
                     )
